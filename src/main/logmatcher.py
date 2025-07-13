@@ -18,7 +18,6 @@
 #
 # This module can be run on Jython 2.5 with monkeyrunner.
 
-from __future__ import with_statement
 
 import os
 import re
@@ -32,15 +31,16 @@ isJython = sys.platform.startswith('java')
 # Whether this script is running on Windows.
 if isJython:
     from java.lang import System
-    isWindows = System.getProperty(u'os.name', u'').lower().startswith(
-        u'windows')
+    isWindows = System.getProperty('os.name', '').lower().startswith(
+        'windows')
 else:
     isWindows = sys.platform.startswith('win')
 
 ### Version Depending Function ###
 
+
 def kill(popen):
-    u'''
+    '''
     Kill process of Popen object.
 
     Arguments :
@@ -62,16 +62,18 @@ def kill(popen):
 
 ###
 
+
 # Default waiting timeout.
 defaultTimeout = 5
 
+
 class LogcatThread(Thread):
-    u'''
+    '''
     Thread that runs logcat.
     '''
 
     def __init__(self, logListener, logcatArgument):
-        u'''
+        '''
         Constructor.
 
         Run logcat.
@@ -81,7 +83,7 @@ class LogcatThread(Thread):
                 This listener has onLogReceived(line).
             logcatArgument : String of arguments for logcat.
         '''
-        Thread.__init__(self, name = u'LogcatThread')
+        Thread.__init__(self, name='LogcatThread')
 
         # Start logcat after clear log.
         #
@@ -93,11 +95,11 @@ class LogcatThread(Thread):
         # remains.
         useShell = not isWindows
         subprocess.Popen(
-            u'adb logcat -c ' + logcatArgument, stdout = subprocess.PIPE,
-            shell = useShell).wait()
+            'adb logcat -c ' + logcatArgument, stdout=subprocess.PIPE,
+            shell=useShell).wait()
         self.__adb = subprocess.Popen(
-            u'adb logcat ' + logcatArgument, stdout = subprocess.PIPE,
-            shell = useShell)
+            'adb logcat ' + logcatArgument, stdout=subprocess.PIPE,
+            shell=useShell)
 
         # Lock object for this thread.
         self.__lock = RLock()
@@ -126,7 +128,7 @@ class LogcatThread(Thread):
                         break
 
     def terminate(self):
-        u'''
+        '''
         Request terminating this thread.
         '''
 
@@ -139,13 +141,14 @@ class LogcatThread(Thread):
         if isNeededProcessTerminating:
             kill(self.__adb)
 
+
 class LogMatcher:
-    u'''
+    '''
     Monitor and match log from logcat.
     '''
 
-    def start(self, logcatArgument = u''):
-        u'''
+    def start(self, logcatArgument=''):
+        '''
         Start watching logcat.
 
         Arguments:
@@ -154,13 +157,13 @@ class LogMatcher:
         self.__matchedEvent = self.createMatchedEvent()
         self.__logcatThread = self.createLogcatThread(logcatArgument)
         self.__lock = RLock()
-        self.__log = u''
+        self.__log = ''
         self.__matchFunction = (lambda log: False)
 
         self.__logcatThread.start()
 
     def createLogcatThread(self, logcatArgument):
-        u'''
+        '''
         Create LogcatThread.
 
         This method is for testability.
@@ -171,15 +174,15 @@ class LogMatcher:
         return LogcatThread(self, logcatArgument)
 
     def createMatchedEvent(self):
-        u'''
+        '''
         Create Event for matching.
 
         This method is for testability.
         '''
         return Event()
 
-    def waitFunction(self, matchFunction, timeout= defaultTimeout):
-        u'''
+    def waitFunction(self, matchFunction, timeout=defaultTimeout):
+        '''
         Wait called thread until the function returns not None.
 
         If matchFunction returns not None or not False,
@@ -209,9 +212,8 @@ class LogMatcher:
 
         return self.checkMatched()
 
-
-    def wait(self, match, timeout = defaultTimeout):
-        u'''
+    def wait(self, match, timeout=defaultTimeout):
+        '''
         Wait called thread until the string is found in log.
 
         Arguments:
@@ -222,14 +224,14 @@ class LogMatcher:
         '''
 
         # Verify argument.
-        if not isinstance(match, basestring):
-            raise ValueError(u'match type is ' + unicode(type(match)))
+        if not isinstance(match, str):
+            raise ValueError('match type is ' + str(type(match)))
 
         return self.waitFunction(
-            lambda log: 0 <= log.find(unicode(match)), timeout)
+            lambda log: 0 <= log.find(str(match)), timeout)
 
-    def waitPattern(self, pattern, timeout = defaultTimeout):
-        u'''
+    def waitPattern(self, pattern, timeout=defaultTimeout):
+        '''
         Wait called thread until the pattern is matched in log.
 
         Arguments :
@@ -239,8 +241,8 @@ class LogMatcher:
         '''
 
         # Convert compiled regex pattern if pattern is basestring.
-        if isinstance(pattern, basestring):
-            waitingPattern = re.compile(unicode(pattern))
+        if isinstance(pattern, str):
+            waitingPattern = re.compile(str(pattern))
         else:
             waitingPattern = pattern
 
@@ -248,7 +250,7 @@ class LogMatcher:
             lambda log: waitingPattern.search(log), timeout)
 
     def onLogReceived(self, line):
-        u'''
+        '''
         Called when line is received.
 
         This method is called by other thread.
@@ -256,13 +258,13 @@ class LogMatcher:
         Arguments :
             line : str that represents log. Unicode string cannot be accepted.
         '''
-        if not isinstance(line, str):
-            raise ValueError(u'line is not str : ' + unicode(type(line)))
+        # if not isinstance(line, str):
+        #     raise ValueError('line is not str : tipo:' + str(type(line)), "line is:",line)
 
         # Store the line.
         with self.__lock:
             # logcat outputs logs in UTF-8.
-            self.__log += unicode(line, 'utf8', 'replace')
+            self.__log += str(line, 'utf8', 'replace')
 
         # If the line is matched, terminate the logcat and
         # wake the waiting event.
@@ -272,7 +274,7 @@ class LogMatcher:
             self.__matchedEvent.set()
 
     def checkMatched(self):
-        u'''
+        '''
         Check whether the log is matched.
 
         This method may be called by other thread.
@@ -280,23 +282,27 @@ class LogMatcher:
         with self.__lock:
             return self.__matchFunction(self.__log)
 
+
 class LogMatcherRunningException(Exception):
-    u'''
+    '''
     Raised when the LogMatcher is running.
     '''
     pass
 
+
 class LogMatcherNotStartedException(Exception):
-    u'''
+    '''
     Raised when the LogMatcher is not started.
     '''
     pass
 
+
 # Global LogMatcher.
 currentLogcatMatcher = None
 
-def start(logcatArgument = u''):
-    u'''
+
+def start(logcatArgument=''):
+    '''
     Start watching logcat.
 
     Arguments :
@@ -318,8 +324,9 @@ def start(logcatArgument = u''):
     except:
         currentLogcatMatcher = None
 
+
 def waitFunction(callingWaitFunction):
-    u'''
+    '''
     Wait with the function.
 
     It has an argument that receives an instance of LogMatcher.
@@ -344,8 +351,9 @@ def waitFunction(callingWaitFunction):
 
     return result
 
-def wait(match, timeout = defaultTimeout):
-    u'''
+
+def wait(match, timeout=defaultTimeout):
+    '''
     Wait until the string is found.
 
     Arguments :
@@ -358,8 +366,9 @@ def wait(match, timeout = defaultTimeout):
 
     return waitFunction(lambda logMatcher: logMatcher.wait(match, timeout))
 
-def waitPattern(pattern, timeout = defaultTimeout):
-    u'''
+
+def waitPattern(pattern, timeout=defaultTimeout):
+    '''
     Wait until the pattern is matched in log.
 
     Arguments :
